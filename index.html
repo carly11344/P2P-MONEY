@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>P2P Money</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#eef2f1;--card:#fff;--tx:#12201d;--mut:#5f6f6b;--acc:#0b6b5c;--onacc:#fff;--pos:#15803d;--neg:#b42318;--bd:#d5dedb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1514;--card:#16211f;--tx:#e8f0ee;--mut:#8fa39e;--acc:#3ed1b5;--onacc:#04211b;--pos:#4ade80;--neg:#f97066;--bd:#263531}}
+:root[data-theme="dark"]{--bg:#0d1514;--card:#16211f;--tx:#e8f0ee;--mut:#8fa39e;--acc:#3ed1b5;--onacc:#04211b;--pos:#4ade80;--neg:#f97066;--bd:#263531}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:520px;margin:0 auto;padding:20px 16px 96px}
+.pg{display:none}.pg.on{display:block}
+h1{font-size:15px;font-weight:600;color:var(--mut);margin:0 0 4px}
+h2{font-size:18px;margin:0 0 12px}
+.big{font-size:44px;font-weight:700;letter-spacing:-1px;line-height:1.1;margin:0 0 16px}
+.big small{font-size:20px;font-weight:500;color:var(--mut)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+.stat,.box,.row{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px}
+.stat{padding:10px}.stat span{display:block;font-size:12px;color:var(--mut)}.stat b{font-size:15px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
+label{display:block;font-size:13px;color:var(--mut)}
+input{width:100%;margin-top:3px;padding:10px;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px}
+input:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.prev{margin:10px 0 0;font-size:14px;color:var(--mut)}
+.btn{width:100%;margin-top:12px;padding:12px;font:inherit;font-weight:600;color:var(--onacc);background:var(--acc);border:0;border-radius:8px}
+.btn.alt{color:var(--tx);background:var(--card);border:1px solid var(--bd);font-weight:400}
+.row{margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+.row .d,.row .n{font-size:13px;color:var(--mut)}.row .n{grid-column:1/-1}
+.row button{grid-row:1/3;grid-column:2;align-self:center;background:none;border:0;color:var(--mut);font-size:13px;padding:6px}
+.racts{grid-row:1/3;grid-column:2;display:flex;flex-direction:column;gap:2px;align-self:center}
+.racts button{background:none;border:0;color:var(--mut);font-size:12px;padding:4px 6px;text-align:right}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx)}
+.chk input{width:auto;margin:0}
+.btn.cancel{background:var(--card);color:var(--mut);border:1px solid var(--bd);font-weight:400}
+.empty{color:var(--mut);padding:8px 0;margin:0}
+.chart svg{width:100%;height:auto;display:block}
+.lb{display:flex;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:4px}
+.kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)}.kv:last-child{border:0}
+.bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;margin:12px 0 4px}.bar i{display:block;height:100%;background:var(--acc)}
+.btn.dng{color:var(--neg)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;padding:14px 2px;font:inherit;font-size:12px;color:var(--mut);background:none;border:0}
+nav button.on{color:var(--acc);font-weight:700}
+.lockscreen{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px}
+.lockbox{width:100%;max-width:300px;text-align:center}
+.lockbox input{text-align:center;font-size:26px;letter-spacing:8px;margin-top:14px}
+.lockbox .btn{margin-top:16px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="lockscreen" id="lock">
+  <div class="lockbox">
+    <h2>🔒 Code PIN</h2>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="lockInput" placeholder="····">
+    <p class="prev" id="lockErr"></p>
+    <button class="btn" id="lockBtn" type="button">Déverrouiller</button>
+    <button class="btn alt" id="lockBio" type="button" style="display:none">Déverrouiller avec la biométrie</button>
+  </div>
+</div>
+<div class="lockscreen" id="modal">
+  <div class="lockbox">
+    <p id="modalMsg" style="margin:0 0 6px"></p>
+    <input type="text" id="modalInput" style="display:none">
+    <button class="btn" id="modalOk" type="button">OK</button>
+    <button class="btn alt" id="modalCancel" type="button">Annuler</button>
+  </div>
+</div>
+<main>
+
+<section class="pg on" id="p-home">
+  <h1>Capital actuel</h1>
+  <p class="big" id="cap">0 <small>XOF</small></p>
+  <div class="stats">
+    <div class="stat"><span>Bénéfices</span><b id="ben">0</b></div>
+    <div class="stat"><span>Dépenses</span><b id="dep">0</b></div>
+    <div class="stat"><span>Résultat net</span><b id="net">0</b></div>
+  </div>
+  <h2>Évolution du capital</h2>
+  <div class="box chart" id="chart" style="margin-bottom:20px"></div>
+  <h2>Résumé</h2>
+  <div class="box" id="sumHome" style="margin-bottom:20px"></div>
+  <h2>Dernière opération</h2>
+  <div id="lastop"></div>
+  <button class="btn" data-go="add">Ajouter une opération</button>
+</section>
+
+<section class="pg" id="p-add">
+  <h2 id="addTitle">Nouvelle opération</h2>
+  <div class="box">
+    <div class="g">
+      <label class="full">Date<input type="date" id="date"></label>
+      <label class="chk full"><input type="checkbox" id="iscap"> Ajout de capital (dépôt, sans opération)</label>
+      <label>Montant initial<input type="number" inputmode="numeric" id="ini" placeholder="0"></label>
+      <label>Montant final<input type="number" inputmode="numeric" id="fin" placeholder="0"></label>
+      <label>Dépenses<input type="number" inputmode="numeric" id="dp" placeholder="0"></label>
+      <label>Détail des dépenses / note<input type="text" id="nt" placeholder="ex. forfait internet"></label>
+      <label class="full">Montant du capital ajouté (si case cochée)<input type="number" inputmode="numeric" id="addamt" placeholder="0"></label>
+    </div>
+    <p class="prev" id="prev">Saisis les montants pour voir le bénéfice, ou coche la case pour un dépôt de capital.</p>
+    <button class="btn" id="btn" type="button">Enregistrer l'opération</button>
+    <button class="btn cancel" id="cancelEdit" type="button" style="display:none">Annuler la modification</button>
+  </div>
+</section>
+
+<section class="pg" id="p-hist">
+  <h2>Historique</h2>
+  <div id="list"></div>
+  <h2 style="margin-top:20px">Aperçu du rapport</h2>
+  <div class="box" id="reportPrev" style="margin-bottom:12px"></div>
+  <button class="btn alt" id="ex" type="button">Copier les données (CSV)</button>
+  <button class="btn alt" id="exxl" type="button">Télécharger en Excel (.xlsx)</button>
+  <button class="btn alt" id="expdf" type="button">Générer le rapport PDF</button>
+</section>
+
+<section class="pg" id="p-goal">
+  <h2>Capital initial</h2>
+  <div class="box">
+    <label>Capital de départ (avant ta première opération)<input type="number" inputmode="numeric" id="initCap" placeholder="0"></label>
+    <button class="btn" id="initCapSave" type="button">Enregistrer le capital initial</button>
+  </div>
+
+  <h2 style="margin-top:24px">Objectif de capital</h2>
+  <div class="box">
+    <label>Capital à atteindre<input type="number" inputmode="numeric" id="goal" placeholder="0"></label>
+    <button class="btn" id="gsave" type="button">Enregistrer l'objectif</button>
+  </div>
+  <div class="box" id="gbox" style="margin-top:12px"></div>
+
+  <h2 style="margin-top:24px">Objectif mensuel</h2>
+  <div class="box">
+    <label>Bénéfice net visé ce mois<input type="number" inputmode="numeric" id="mgoal" placeholder="0"></label>
+    <button class="btn" id="mgsave" type="button">Enregistrer l'objectif mensuel</button>
+  </div>
+  <div class="box" id="mgbox" style="margin-top:12px"></div>
+</section>
+
+<section class="pg" id="p-set">
+  <h2>Paramètres</h2>
+  <div class="box">
+    <label>Devise affichée<input type="text" id="cur" maxlength="6"></label>
+    <p class="prev">Apparence</p>
+    <div class="g">
+      <button class="btn alt" data-theme-set="light" type="button">Clair</button>
+      <button class="btn alt" data-theme-set="dark" type="button">Sombre</button>
+      <button class="btn alt full" data-theme-set="auto" type="button">Automatique</button>
+    </div>
+  </div>
+
+  <h2 style="margin-top:24px">Sécurité</h2>
+  <div class="box" id="secBox"></div>
+  <div class="box" id="bioBox" style="margin-top:12px"></div>
+
+  <h2 style="margin-top:24px">Sauvegarde et transfert</h2>
+  <div class="box">
+    <p class="prev" style="margin-top:0">Exporte un fichier pour transférer tes données vers un autre téléphone, puis importe-le là-bas.</p>
+    <button class="btn alt" id="expJson" type="button">Exporter les données</button>
+    <button class="btn alt" id="impJson" type="button">Importer les données</button>
+    <input type="file" id="impFile" accept="application/json,.json" style="display:none">
+  </div>
+  <button class="btn alt dng" id="wipe" type="button" style="margin-top:20px">Effacer toutes les données</button>
+</section>
+
+</main>
+<nav>
+  <button data-go="home" class="on">Accueil</button>
+  <button data-go="hist">Historique</button>
+  <button data-go="add">Ajouter</button>
+  <button data-go="goal">Objectifs</button>
+  <button data-go="set">Paramètres</button>
+</nav>
+
+<script>
+var KEY="p2pmoney:v1", SKEY="p2pmoney:set", E=[], S={cur:"XOF",goal:0,mgoal:0,initCap:0,theme:"auto",pin:"",bioEnabled:false,bioId:""}, CUR="XOF", editIdx=-1;
+function loadS(){try{var r=localStorage.getItem(SKEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}CUR=S.cur||"F";applyTheme()}
+function saveS(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}
+function applyTheme(){var d=document.documentElement;if(S.theme==="auto")d.removeAttribute("data-theme");else d.setAttribute("data-theme",S.theme)}
+function renderSec(){
+  var b=$("secBox");if(!b)return;
+  if(S.pin){
+    b.innerHTML='<p class="prev" style="margin-top:0">Code PIN activé. L\'app te le demandera à chaque ouverture.</p><button class="btn alt" id="pinRemove" type="button">Désactiver le code PIN</button>';
+  }else{
+    b.innerHTML='<label>Nouveau code PIN (4 à 8 chiffres)<input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="pin1" placeholder="····"></label>'
+      +'<label>Confirmer le code<input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="pin2" placeholder="····"></label>'
+      +'<button class="btn" id="pinSave" type="button">Activer le code PIN</button>';
+  }
+}
+function lock(){$("lock").style.display="flex";$("lockInput").value="";$("lockErr").textContent="";$("lockBio").style.display=(S.bioEnabled?"block":"none");setTimeout(function(){$("lockInput").focus()},50)}
+function unlock(){$("lock").style.display="none";render()}
+function showModal(msg,opts){
+  opts=opts||{};
+  return new Promise(function(resolve){
+    $("modalMsg").textContent=msg;
+    var inp=$("modalInput");
+    if(opts.input){inp.style.display="block";inp.type=opts.password?"password":"text";inp.setAttribute("inputmode",opts.numeric?"numeric":"text");inp.value=""}
+    else{inp.style.display="none"}
+    $("modal").style.display="flex";
+    if(opts.input)setTimeout(function(){inp.focus()},50);
+    var ok=$("modalOk"),cancel=$("modalCancel");
+    function cleanup(){$("modal").style.display="none";ok.removeEventListener("click",onOk);cancel.removeEventListener("click",onCancel)}
+    function onOk(){var v=opts.input?inp.value:true;cleanup();resolve(v)}
+    function onCancel(){cleanup();resolve(opts.input?null:false)}
+    ok.addEventListener("click",onOk);
+    cancel.addEventListener("click",onCancel);
+  });
+}
+function tryUnlock(){
+  if($("lockInput").value&&$("lockInput").value===S.pin){unlock()}
+  else{$("lockErr").textContent="Code incorrect.";$("lockInput").value="";$("lockInput").focus()}
+}
+function b64(buf){var b=new Uint8Array(buf),s="";for(var i=0;i<b.byteLength;i++)s+=String.fromCharCode(b[i]);return btoa(s)}
+function unb64(str){var bin=atob(str),b=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return b.buffer}
+function rnd(n){var a=new Uint8Array(n);crypto.getRandomValues(a);return a}
+function bioSupported(){
+  return !!(window.PublicKeyCredential&&navigator.credentials&&PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable)
+    ? PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function(){return false})
+    : Promise.resolve(false);
+}
+function renderBio(){
+  var b=$("bioBox");if(!b)return;
+  if(!S.pin){b.innerHTML='<p class="empty">Active d\'abord un code PIN ci-dessus pour pouvoir ajouter la biométrie.</p>';return}
+  b.innerHTML='<p class="empty">Vérification de la biométrie disponible…</p>';
+  bioSupported().then(function(ok){
+    if(!ok){b.innerHTML='<p class="empty">Biométrie non disponible sur cet appareil ou ce navigateur.</p>';return}
+    if(S.bioEnabled){
+      b.innerHTML='<p class="prev" style="margin-top:0">Déverrouillage biométrique activé.</p><button class="btn alt" id="bioOff" type="button">Désactiver la biométrie</button>';
+    }else{
+      b.innerHTML='<p class="prev" style="margin-top:0">Utilise Face ID, l\'empreinte digitale ou le verrouillage de l\'appareil pour déverrouiller l\'app.</p><button class="btn" id="bioOn" type="button">Activer la biométrie</button>';
+    }
+  });
+}
+function enableBio(){
+  navigator.credentials.create({publicKey:{
+    challenge:rnd(32),
+    rp:{name:"P2P Money"},
+    user:{id:rnd(16),name:"p2pmoney-local",displayName:"P2P Money"},
+    pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required"},
+    timeout:60000
+  }}).then(function(cred){
+    if(!cred)throw new Error("no cred");
+    S.bioId=b64(cred.rawId);S.bioEnabled=true;saveS();renderBio();
+  }).catch(function(){alert("Impossible d'activer la biométrie sur cet appareil.")});
+}
+function disableBio(){
+  showModal("Désactiver le déverrouillage biométrique ?").then(function(ok){
+    if(!ok)return;
+    S.bioEnabled=false;S.bioId="";saveS();renderBio();
+  });
+}
+function tryBioUnlock(){
+  if(!S.bioEnabled||!S.bioId)return;
+  $("lockErr").textContent="";
+  navigator.credentials.get({publicKey:{
+    challenge:rnd(32),
+    allowCredentials:[{id:unb64(S.bioId),type:"public-key"}],
+    userVerification:"required",
+    timeout:60000
+  }}).then(function(res){if(res)unlock()})
+  .catch(function(){$("lockErr").textContent="Biométrie annulée ou échouée. Utilise ton code PIN."});
+}
+function $(i){return document.getElementById(i)}
+function fmt(n){return Math.round(n).toLocaleString("fr-FR")}
+function sg(n){return (n>0?"+":"")+fmt(n)}
+function cls(n){return n>0?"pos":n<0?"neg":""}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function load(){try{var r=localStorage.getItem(KEY);if(r)E=JSON.parse(r)}catch(e){E=[]}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(E))}catch(e){}}
+function last(){return E.length?E[E.length-1].f:(S.initCap||0)}
+function totalExp(){var t=0;E.forEach(function(e){t+=e.x});return t}
+function entryCapital(e){return e.type==="cap"?e.f:(e.f-e.x+(e.c||0))}
+function currentCapital(){return E.length?entryCapital(E[E.length-1]):(S.initCap||0)}
+
+function go(p){
+  document.querySelectorAll(".pg").forEach(function(s){s.classList.toggle("on",s.id==="p-"+p)});
+  document.querySelectorAll("nav button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-go")===p)});
+  if(p==="add"&&!$("ini").value)$("ini").value=currentCapital();
+  window.scrollTo(0,0);
+}
+function rowHTML(e,k,del){
+  var iscap=e.type==="cap", c=iscap?0:(e.c||0), p=e.f-e.i, pn=p-e.x;
+  var label=iscap?('<b class="pos">+'+fmt(p)+' '+CUR+'</b>')
+    :('<b class="'+cls(p)+'">'+sg(p)+' '+CUR+'</b>'+(e.x?' <b class="'+cls(pn)+'" style="font-size:13px">net '+sg(pn)+' '+CUR+'</b>':''));
+  var detail=iscap?(esc(e.d)+' · Ajout de capital'):(esc(e.d)+' · '+fmt(e.i)+' → '+fmt(e.f)+(e.x?' · dépenses '+fmt(e.x):''));
+  if(c)detail+=' · +'+fmt(c)+' '+CUR+' de capital ajouté';
+  return '<div class="row">'+label
+    +(del?'<div class="racts"><button data-edit="'+k+'">Modifier</button><button data-k="'+k+'">Supprimer</button></div>':'')
+    +'<span class="d">'+detail+'</span>'
+    +(e.n?'<span class="n">'+esc(e.n)+'</span>':'')+'</div>';
+}
+function render(){
+  var b=0,x=0;
+  E.forEach(function(e){if(e.type!=="cap")b+=e.f-e.i;x+=e.x});
+  $("cap").innerHTML=fmt(currentCapital())+" <small>"+CUR+"</small>";
+  $("ben").textContent=fmt(b);$("dep").textContent=fmt(x);
+  $("net").textContent=sg(b-x);$("net").className=cls(b-x);
+  $("lastop").innerHTML=E.length?rowHTML(E[E.length-1],0,false):'<p class="empty">Aucune opération pour l\'instant.</p>';
+  var h="";
+  for(var k=E.length-1;k>=0;k--)h+=rowHTML(E[k],k,true);
+  $("list").innerHTML=h||'<p class="empty">Aucune opération. Ajoute la première depuis la page Ajouter.</p>';
+  var cap=currentCapital(),gb=$("gbox");
+  if(S.goal>0){
+    var pc=Math.max(0,Math.min(100,cap/S.goal*100));
+    gb.innerHTML='<div class="kv"><span>Objectif</span><b>'+fmt(S.goal)+' '+CUR+'</b></div><div class="kv"><span>Capital actuel</span><b>'+fmt(cap)+' '+CUR+'</b></div><div class="bar"><i style="width:'+pc.toFixed(0)+'%"></i></div><p class="prev">'+(cap>=S.goal?"Objectif atteint.":"Reste "+fmt(S.goal-cap)+" "+CUR+" ("+pc.toFixed(0)+" %)")+'</p>';
+  }else gb.innerHTML='<p class="empty">Aucun objectif défini. Saisis un montant ci-dessus.</p>';
+  var mb=$("mgbox");
+  if(mb){
+    var now=new Date(), ym=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+    var mNet=0;
+    E.forEach(function(e){if(e.type!=="cap"&&e.d&&e.d.slice(0,7)===ym)mNet+=(e.f-e.i)-e.x});
+    var mLabel=now.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+    mLabel=mLabel.charAt(0).toUpperCase()+mLabel.slice(1);
+    if(S.mgoal>0){
+      var mpc=Math.max(0,Math.min(100,mNet/S.mgoal*100));
+      mb.innerHTML='<div class="kv"><span>Mois</span><b>'+mLabel+'</b></div><div class="kv"><span>Objectif</span><b>'+fmt(S.mgoal)+' '+CUR+'</b></div><div class="kv"><span>Résultat net ce mois</span><b class="'+cls(mNet)+'">'+sg(mNet)+' '+CUR+'</b></div><div class="bar"><i style="width:'+mpc.toFixed(0)+'%"></i></div><p class="prev">'+(mNet>=S.mgoal?"Objectif du mois atteint.":"Reste "+fmt(S.mgoal-mNet)+" "+CUR+" ("+mpc.toFixed(0)+" %)")+'</p>';
+    }else mb.innerHTML='<p class="empty">Aucun objectif mensuel défini. Saisis un montant ci-dessus.</p>';
+  }
+  var rp=$("reportPrev");
+  if(rp){
+    if(!E.length){rp.innerHTML='<p class="empty">Aucune donnée. Le rapport sera disponible dès ta première opération.</p>';}
+    else{
+      var ops=E.filter(function(e){return e.type!=="cap"}),caps=E.filter(function(e){return e.type==="cap"});
+      var today=new Date().toLocaleDateString("fr-FR");
+      function kv2(a,c){return '<div class="kv"><span>'+a+'</span><b>'+c+'</b></div>'}
+      rp.innerHTML='<p class="prev" style="margin-top:0">Rapport P2P Money · généré le '+today+'</p>'
+        +kv2("Capital actuel",fmt(cap)+" "+CUR)
+        +kv2("Bénéfices",fmt(b)+" "+CUR)
+        +kv2("Dépenses",fmt(x)+" "+CUR)
+        +kv2("Résultat net",sg(b-x)+" "+CUR)
+        +kv2("Opérations / ajouts",ops.length+" / "+caps.length)
+        +'<p class="prev">Le PDF téléchargé reprend ces totaux et le détail de chaque opération.</p>';
+    }
+  }
+  chart();
+}
+function chart(){
+  var c=$("chart"),s2=$("sumHome");
+  function setSum(html){if(s2)s2.innerHTML=html}
+  if(E.length<2){c.innerHTML='<p class="empty">Ajoute au moins 2 opérations pour voir la courbe.</p>'}
+  else{
+    var v=[];
+    E.forEach(function(e){v.push(entryCapital(e))});
+    var n=v.length, W=300,H=150,padL=40,padR=8,padT=10,padB=24;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var mn=Math.min.apply(null,v),mx=Math.max.apply(null,v);
+    var GSTEP=100000;
+    var lo=Math.floor(mn/GSTEP)*GSTEP, hi=Math.ceil(mx/GSTEP)*GSTEP;
+    if(hi===lo)hi=lo+GSTEP;
+    var yTicks=[];
+    for(var t=lo;t<=hi+1;t+=GSTEP)yTicks.push(t);
+    if(yTicks.length>10){
+      var stride=Math.ceil(yTicks.length/10);
+      yTicks=yTicks.filter(function(t2,idx){return idx%stride===0||idx===yTicks.length-1});
+    }
+    var r=(hi-lo)||1;
+    function xAt(i){return padL+(n===1?0:i*plotW/(n-1))}
+    function yAt(val){return padT+plotH-(val-lo)/r*plotH}
+    var pts=v.map(function(val,i){return xAt(i).toFixed(1)+","+yAt(val).toFixed(1)}).join(" ");
+    var dots=v.map(function(val,i){return '<circle cx="'+xAt(i).toFixed(1)+'" cy="'+yAt(val).toFixed(1)+'" r="3.2" fill="var(--acc)"/>'}).join("");
+    var yAxis=yTicks.map(function(t3){
+      var y=yAt(t3).toFixed(1);
+      return '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="var(--bd)" stroke-width="1"/>'
+        +'<text x="'+(padL-4)+'" y="'+y+'" font-size="7.5" fill="var(--mut)" text-anchor="end" dominant-baseline="middle">'+fmt(t3)+'</text>';
+    }).join("");
+    var maxLab=Math.min(n,5),step=Math.max(1,Math.round((n-1)/Math.max(1,maxLab-1))),idxs=[];
+    for(var i=0;i<n;i+=step)idxs.push(i);
+    if(idxs[idxs.length-1]!==n-1)idxs.push(n-1);
+    var xAxis=idxs.map(function(i){
+      var dd=E[i].d?E[i].d.slice(5):"";
+      return '<text x="'+xAt(i).toFixed(1)+'" y="'+(H-padB+13)+'" font-size="7.5" fill="var(--mut)" text-anchor="middle">'+esc(dd)+'</text>';
+    }).join("");
+    c.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Courbe du capital, axe X en dates, axe Y en montants">'
+      +yAxis
+      +'<polyline points="'+pts+'" fill="none" stroke="var(--acc)" stroke-width="2.2" stroke-linejoin="round"/>'
+      +dots+xAxis+'</svg>';
+  }
+  if(!E.length){setSum('<p class="empty">Les statistiques apparaîtront ici.</p>');return}
+  var ops=E.filter(function(e){return e.type!=="cap"}),caps=E.filter(function(e){return e.type==="cap"});
+  var capsTotal=E.reduce(function(a,e){return a+capAdded(e)},0);
+  function kv(a,b){return '<div class="kv"><span>'+a+'</span><b>'+b+'</b></div>'}
+  if(!ops.length){setSum(kv("Opérations",0)+kv("Capital ajouté",fmt(capsTotal)+" "+CUR));return}
+  var g=ops.map(function(e){return e.f-e.i}),bestG=Math.max.apply(null,g),worstG=Math.min.apply(null,g),maxX=Math.max.apply(null,ops.map(function(e){return e.x}));
+  setSum(kv("Opérations",ops.length)+kv("Capital ajouté",fmt(capsTotal)+" "+CUR)+kv("Meilleur résultat",sg(bestG)+" "+CUR)+kv("Pire résultat",sg(worstG)+" "+CUR)+kv("Plus grosse dépense",fmt(maxX)+" "+CUR));
+}
+function preview(){
+  var i=+$("ini").value,f=+$("fin").value,d=+$("dp").value;
+  var capOn=$("iscap").checked, a=+$("addamt").value||0;
+  if(!$("fin").value){
+    $("prev").textContent=capOn?"Renseigne aussi le montant initial et le montant final de la semaine.":"Saisis les montants pour voir le bénéfice.";
+    return;
+  }
+  var txt="Bénéfice : <b class='"+cls(f-i)+"'>"+sg(f-i)+" "+CUR+"</b> · bénéfice net : <b class='"+cls(f-i-d)+"'>"+sg(f-i-d)+" "+CUR+"</b>";
+  if(capOn)txt+=" · capital ajouté : <b>"+(a?"+"+fmt(a):"—")+" "+CUR+"</b>";
+  $("prev").innerHTML=txt;
+}
+function capAdded(e){return e.type==="cap"?(e.f-e.i):(e.c||0)}
+function csv(){
+  var s="date;type;montant_initial;montant_final;benefice;depenses;capital_ajoute;detail_depenses\n";
+  E.forEach(function(e){s+=[e.d,e.type==="cap"?"ajout_capital":"operation",e.i,e.f,e.f-e.i,e.x,capAdded(e),'"'+e.n.replace(/"/g,'""')+'"'].join(";")+"\n"});
+  return s;
+}
+function excelRows(){
+  var rows=[["Date","Type","Montant initial","Montant final","Bénéfice","Dépenses","Capital ajouté","Détail"]];
+  E.forEach(function(e){rows.push([e.d,e.type==="cap"?"Ajout de capital":"Opération",e.i,e.f,e.f-e.i,e.x,capAdded(e),e.n])});
+  return rows;
+}
+function pdfReport(){
+  if(!window.jspdf){alert("La bibliothèque PDF n'a pas pu se charger. Vérifie ta connexion internet.");return}
+  var doc=new window.jspdf.jsPDF(), b=0,x=0;
+  E.forEach(function(e){if(e.type!=="cap")b+=e.f-e.i;x+=e.x});
+  doc.setFontSize(16);doc.text("Rapport P2P Money",14,18);
+  doc.setFontSize(10);doc.setTextColor(120);doc.text("Genere le "+new Date().toLocaleDateString("fr-FR"),14,25);
+  doc.setTextColor(20);doc.setFontSize(12);
+  doc.text("Capital actuel : "+fmt(currentCapital())+" "+CUR,14,36);
+  doc.text("Benefices : "+fmt(b)+" "+CUR,14,44);
+  doc.text("Depenses : "+fmt(x)+" "+CUR,14,52);
+  doc.text("Resultat net : "+sg(b-x)+" "+CUR,14,60);
+  var y=74;
+  doc.setFontSize(12);doc.text("Historique des operations",14,y);y+=8;
+  doc.setFontSize(9);
+  if(!E.length){doc.text("Aucune operation enregistree.",14,y)}
+  E.forEach(function(e){
+    if(y>285){doc.addPage();y=20}
+    var line=e.type==="cap"
+      ?(e.d+" - Ajout de capital : +"+fmt(e.f-e.i)+" "+CUR+(e.n?" ("+e.n+")":""))
+      :(e.d+" - "+fmt(e.i)+" vers "+fmt(e.f)+" ("+sg(e.f-e.i)+" "+CUR+")"+(e.x?" - depenses "+fmt(e.x)+" "+CUR:"")+(e.c?" - capital ajoute +"+fmt(e.c)+" "+CUR:"")+(e.n?" - "+e.n:""));
+    doc.text(line,14,y);y+=6.5;
+  });
+  doc.save("rapport-p2pmoney-"+new Date().toISOString().slice(0,10)+".pdf");
+}
+
+document.addEventListener("click",function(ev){
+  var g=ev.target.getAttribute&&ev.target.getAttribute("data-go");
+  if(g)go(g);
+});
+["ini","fin","dp","addamt"].forEach(function(i){$(i).addEventListener("input",preview)});
+function resetForm(){
+  $("ini").value="";$("fin").value="";$("dp").value="";$("nt").value="";$("addamt").value="";$("iscap").checked=false;
+  editIdx=-1;$("addTitle").textContent="Nouvelle opération";$("btn").textContent="Enregistrer l'opération";$("cancelEdit").style.display="none";
+  preview();
+}
+$("btn").addEventListener("click",function(){
+  if(!$("fin").value||!$("ini").value){$("prev").textContent="Renseigne le montant initial et le montant final.";return}
+  var capOn=$("iscap").checked;
+  if(capOn&&!$("addamt").value){$("prev").textContent="Renseigne le montant du capital ajouté, ou décoche la case.";return}
+  var entry={d:$("date").value,i:+$("ini").value,f:+$("fin").value,x:+$("dp").value||0,c:capOn?(+$("addamt").value||0):0,n:$("nt").value.trim(),type:"op"};
+  if(editIdx>=0)E[editIdx]=entry;else E.push(entry);
+  E.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0});
+  save();
+  resetForm();
+  render();go("hist");
+});
+$("iscap").addEventListener("change",preview);
+$("list").addEventListener("click",function(ev){
+  var editBtn=ev.target.closest?ev.target.closest("[data-edit]"):null;
+  var delBtn=ev.target.closest?ev.target.closest("[data-k]"):null;
+  if(editBtn){
+    var e=E[+editBtn.getAttribute("data-edit")];
+    editIdx=+editBtn.getAttribute("data-edit");
+    $("date").value=e.d;
+    if(e.type==="cap"){$("iscap").checked=true;$("addamt").value=e.f-e.i;$("ini").value="";$("fin").value="";$("dp").value="";$("nt").value=e.n||""}
+    else{
+      $("ini").value=e.i;$("fin").value=e.f;$("dp").value=e.x||"";$("nt").value=e.n||"";
+      if(e.c){$("iscap").checked=true;$("addamt").value=e.c}else{$("iscap").checked=false;$("addamt").value=""}
+    }
+    $("addTitle").textContent="Modifier l'opération";$("btn").textContent="Mettre à jour";$("cancelEdit").style.display="block";
+    preview();go("add");
+    return;
+  }
+  if(delBtn){
+    var dk=delBtn.getAttribute("data-k");
+    showModal("Supprimer cette opération ?").then(function(ok){
+      if(ok){E.splice(+dk,1);save();render()}
+    });
+    return;
+  }
+});
+$("cancelEdit").addEventListener("click",function(){resetForm();go("hist")});
+$("ex").addEventListener("click",function(){
+  var b=$("ex"),t="Copier les données (CSV)";
+  try{navigator.clipboard.writeText(csv()).then(function(){b.textContent="Copié. Colle-le dans Excel ou Notes.";setTimeout(function(){b.textContent=t},2500)},function(){b.textContent="Copie impossible sur ce navigateur"})}
+  catch(e){b.textContent="Copie impossible sur ce navigateur"}
+});
+$("exxl").addEventListener("click",function(){
+  if(!window.XLSX){alert("La bibliothèque Excel n'a pas pu se charger. Vérifie ta connexion internet.");return}
+  var ws=XLSX.utils.aoa_to_sheet(excelRows()),wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Historique");
+  XLSX.writeFile(wb,"p2pmoney-"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+$("expdf").addEventListener("click",pdfReport);
+$("expJson").addEventListener("click",function(){
+  var backup={version:1,exported:new Date().toISOString(),entries:E,settings:S};
+  var blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
+  var url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="p2pmoney-sauvegarde-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url)},1000);
+});
+$("impJson").addEventListener("click",function(){$("impFile").click()});
+$("impFile").addEventListener("change",function(ev){
+  var file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  var r=new FileReader();
+  r.onload=function(){
+    var data;
+    try{data=JSON.parse(r.result)}catch(e){alert("Ce fichier n'est pas une sauvegarde valide.");ev.target.value="";return}
+    var entries=data.entries||data.E;
+    if(!Array.isArray(entries)){alert("Ce fichier n'est pas une sauvegarde valide.");ev.target.value="";return}
+    showModal("Importer remplacera toutes les données actuelles sur ce téléphone. Continuer ?").then(function(ok){
+      if(!ok){ev.target.value="";return}
+      E=entries;
+      S=Object.assign({cur:"XOF",goal:0,mgoal:0,initCap:0,theme:"auto",pin:"",bioEnabled:false,bioId:""},data.settings||data.S||{});
+      CUR=S.cur||"XOF";
+      save();saveS();applyTheme();
+      $("goal").value=S.goal||"";$("mgoal").value=S.mgoal||"";$("cur").value=S.cur;
+      ev.target.value="";
+      renderSec();renderBio();
+      render();go("home");
+      alert("Données importées.");
+    });
+  };
+  r.readAsText(file);
+});
+$("initCapSave").addEventListener("click",function(){S.initCap=+$("initCap").value||0;saveS();render()});
+$("gsave").addEventListener("click",function(){S.goal=+$("goal").value||0;saveS();render()});
+$("mgsave").addEventListener("click",function(){S.mgoal=+$("mgoal").value||0;saveS();render()});
+$("cur").addEventListener("input",function(){S.cur=$("cur").value.trim()||"XOF";CUR=S.cur;saveS();render()});
+document.querySelectorAll("[data-theme-set]").forEach(function(b){b.addEventListener("click",function(){S.theme=b.getAttribute("data-theme-set");saveS();applyTheme()})});
+$("wipe").addEventListener("click",function(){
+  showModal("Effacer toutes les opérations et les réglages ?").then(function(ok){
+    if(!ok)return;
+    E=[];S={cur:"XOF",goal:0,mgoal:0,initCap:0,theme:"auto",pin:"",bioEnabled:false,bioId:""};CUR="XOF";save();saveS();applyTheme();renderSec();renderBio();
+    $("initCap").value="";$("goal").value="";$("mgoal").value="";$("cur").value="XOF";render();go("home");
+  });
+});
+$("lockBtn").addEventListener("click",tryUnlock);
+$("lockInput").addEventListener("keydown",function(ev){if(ev.key==="Enter")tryUnlock()});
+$("lockBio").addEventListener("click",tryBioUnlock);
+$("bioBox").addEventListener("click",function(ev){
+  if(ev.target.id==="bioOn")enableBio();
+  if(ev.target.id==="bioOff")disableBio();
+});
+$("secBox").addEventListener("click",function(ev){
+  if(ev.target.id==="pinSave"){
+    var a=$("pin1").value,b=$("pin2").value;
+    if(!/^[0-9]{4,8}$/.test(a)){alert("Le code doit contenir entre 4 et 8 chiffres.");return}
+    if(a!==b){alert("Les deux codes ne correspondent pas.");return}
+    S.pin=a;saveS();renderSec();
+    alert("Code PIN activé.");
+  }
+  if(ev.target.id==="pinRemove"){
+    showModal("Entre ton code PIN actuel pour le désactiver :",{input:true,password:true,numeric:true}).then(function(p){
+      if(p===null)return;
+      if(p!==S.pin){alert("Code incorrect.");return}
+      S.pin="";S.bioEnabled=false;S.bioId="";saveS();renderSec();renderBio();
+    });
+  }
+});
+$("date").valueAsDate=new Date();
+load();loadS();$("initCap").value=S.initCap||"";$("goal").value=S.goal||"";$("mgoal").value=S.mgoal||"";$("cur").value=S.cur;renderSec();renderBio();
+if(S.pin){lock()}else{render()}
+</script>
+</body>
+</html>
