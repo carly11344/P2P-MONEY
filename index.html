@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>P2P Money</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b6b5c">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#eef2f1;--card:#fff;--tx:#12201d;--mut:#5f6f6b;--acc:#0b6b5c;--onacc:#fff;--pos:#15803d;--neg:#b42318;--bd:#d5dedb}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1514;--card:#16211f;--tx:#e8f0ee;--mut:#8fa39e;--acc:#3ed1b5;--onacc:#04211b;--pos:#4ade80;--neg:#f97066;--bd:#263531}}
@@ -564,6 +568,11 @@ $("secBox").addEventListener("click",function(ev){
 $("date").valueAsDate=new Date();
 load();loadS();$("initCap").value=S.initCap||"";$("goal").value=S.goal||"";$("mgoal").value=S.mgoal||"";$("cur").value=S.cur;renderSec();renderBio();
 if(S.pin){lock()}else{render()}
+if("serviceWorker" in navigator){
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
 </script>
 </body>
 </html>
