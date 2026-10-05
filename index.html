@@ -9,9 +9,9 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#eef2f1;--card:#fff;--tx:#12201d;--mut:#5f6f6b;--acc:#0b6b5c;--onacc:#fff;--pos:#15803d;--neg:#b42318;--bd:#d5dedb}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1514;--card:#16211f;--tx:#e8f0ee;--mut:#8fa39e;--acc:#3ed1b5;--onacc:#04211b;--pos:#4ade80;--neg:#f97066;--bd:#263531}}
-:root[data-theme="dark"]{--bg:#0d1514;--card:#16211f;--tx:#e8f0ee;--mut:#8fa39e;--acc:#3ed1b5;--onacc:#04211b;--pos:#4ade80;--neg:#f97066;--bd:#263531}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#eef2f1;--card:#fff;--tx:#12201d;--mut:#5f6f6b;--acc:#0b6b5c;--onacc:#fff;--pos:#15803d;--neg:#b42318;--yel:#a16a00;--bd:#d5dedb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1514;--card:#16211f;--tx:#e8f0ee;--mut:#8fa39e;--acc:#3ed1b5;--onacc:#04211b;--pos:#4ade80;--neg:#f97066;--yel:#f0c23a;--bd:#263531}}
+:root[data-theme="dark"]{--bg:#0d1514;--card:#16211f;--tx:#e8f0ee;--mut:#8fa39e;--acc:#3ed1b5;--onacc:#04211b;--pos:#4ade80;--neg:#f97066;--yel:#f0c23a;--bd:#263531}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -24,7 +24,7 @@ h2{font-size:18px;margin:0 0 12px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
 .stat,.box,.row{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px}
 .stat{padding:10px}.stat span{display:block;font-size:12px;color:var(--mut)}.stat b{font-size:15px}
-.pos{color:var(--pos)}.neg{color:var(--neg)}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.yel{color:var(--yel)}
 .g{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
 label{display:block;font-size:13px;color:var(--mut)}
 input{width:100%;margin-top:3px;padding:10px;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px}
@@ -55,7 +55,6 @@ nav button.on{color:var(--acc);font-weight:700}
 .lockbox .btn{margin-top:16px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="lockscreen" id="lock">
@@ -79,10 +78,10 @@ nav button.on{color:var(--acc);font-weight:700}
 
 <section class="pg on" id="p-home">
   <h1>Capital actuel</h1>
-  <p class="big" id="cap">0 <small>XOF</small></p>
+  <p class="big yel" id="cap">0 <small>XOF</small></p>
   <div class="stats">
-    <div class="stat"><span>Bénéfices</span><b id="ben">0</b></div>
-    <div class="stat"><span>Dépenses</span><b id="dep">0</b></div>
+    <div class="stat"><span>Bénéfices</span><b id="ben" class="yel">0</b></div>
+    <div class="stat"><span>Dépenses</span><b id="dep" class="neg">0</b></div>
     <div class="stat"><span>Résultat net</span><b id="net">0</b></div>
   </div>
   <h2>Évolution du capital</h2>
@@ -118,7 +117,7 @@ nav button.on{color:var(--acc);font-weight:700}
   <h2 style="margin-top:20px">Aperçu du rapport</h2>
   <div class="box" id="reportPrev" style="margin-bottom:12px"></div>
   <button class="btn alt" id="ex" type="button">Copier les données (CSV)</button>
-  <button class="btn alt" id="exxl" type="button">Télécharger en Excel (.xlsx)</button>
+  <button class="btn alt" id="exxl" type="button">Télécharger en Excel (.xls, coloré)</button>
   <button class="btn alt" id="expdf" type="button">Générer le rapport PDF</button>
 </section>
 
@@ -290,7 +289,7 @@ function rowHTML(e,k,del){
   var iscap=e.type==="cap", c=iscap?0:(e.c||0), p=e.f-e.i, pn=p-e.x;
   var label=iscap?('<b class="pos">+'+fmt(p)+' '+CUR+'</b>')
     :('<b class="'+cls(p)+'">'+sg(p)+' '+CUR+'</b>'+(e.x?' <b class="'+cls(pn)+'" style="font-size:13px">net '+sg(pn)+' '+CUR+'</b>':''));
-  var detail=iscap?(esc(e.d)+' · Ajout de capital'):(esc(e.d)+' · '+fmt(e.i)+' → '+fmt(e.f)+(e.x?' · dépenses '+fmt(e.x):''));
+  var detail=iscap?(esc(e.d)+' · Ajout de capital'):(esc(e.d)+' · '+fmt(e.i)+' → '+fmt(e.f)+(e.x?' · dépenses <b class="neg">'+fmt(e.x)+'</b>':''));
   if(c)detail+=' · +'+fmt(c)+' '+CUR+' de capital ajouté';
   return '<div class="row">'+label
     +(del?'<div class="racts"><button data-edit="'+k+'">Modifier</button><button data-k="'+k+'">Supprimer</button></div>':'')
@@ -310,7 +309,7 @@ function render(){
   var cap=currentCapital(),gb=$("gbox");
   if(S.goal>0){
     var pc=Math.max(0,Math.min(100,cap/S.goal*100));
-    gb.innerHTML='<div class="kv"><span>Objectif</span><b>'+fmt(S.goal)+' '+CUR+'</b></div><div class="kv"><span>Capital actuel</span><b>'+fmt(cap)+' '+CUR+'</b></div><div class="bar"><i style="width:'+pc.toFixed(0)+'%"></i></div><p class="prev">'+(cap>=S.goal?"Objectif atteint.":"Reste "+fmt(S.goal-cap)+" "+CUR+" ("+pc.toFixed(0)+" %)")+'</p>';
+    gb.innerHTML='<div class="kv"><span>Objectif</span><b>'+fmt(S.goal)+' '+CUR+'</b></div><div class="kv"><span>Capital actuel</span><b class="yel">'+fmt(cap)+' '+CUR+'</b></div><div class="bar"><i style="width:'+pc.toFixed(0)+'%"></i></div><p class="prev">'+(cap>=S.goal?"Objectif atteint.":"Reste "+fmt(S.goal-cap)+" "+CUR+" ("+pc.toFixed(0)+" %)")+'</p>';
   }else gb.innerHTML='<p class="empty">Aucun objectif défini. Saisis un montant ci-dessus.</p>';
   var mb=$("mgbox");
   if(mb){
@@ -332,10 +331,10 @@ function render(){
       var today=new Date().toLocaleDateString("fr-FR");
       function kv2(a,c){return '<div class="kv"><span>'+a+'</span><b>'+c+'</b></div>'}
       rp.innerHTML='<p class="prev" style="margin-top:0">Rapport P2P Money · généré le '+today+'</p>'
-        +kv2("Capital actuel",fmt(cap)+" "+CUR)
-        +kv2("Bénéfices",fmt(b)+" "+CUR)
-        +kv2("Dépenses",fmt(x)+" "+CUR)
-        +kv2("Résultat net",sg(b-x)+" "+CUR)
+        +kv2("Capital actuel",'<span class="yel">'+fmt(cap)+" "+CUR+'</span>')
+        +kv2("Bénéfices",'<span class="pos">'+fmt(b)+" "+CUR+'</span>')
+        +kv2("Dépenses",'<span class="neg">'+fmt(x)+" "+CUR+'</span>')
+        +kv2("Résultat net",'<span class="'+cls(b-x)+'">'+sg(b-x)+" "+CUR+'</span>')
         +kv2("Opérations / ajouts",ops.length+" / "+caps.length)
         +'<p class="prev">Le PDF téléchargé reprend ces totaux et le détail de chaque opération.</p>';
     }
@@ -389,7 +388,7 @@ function chart(){
   function kv(a,b){return '<div class="kv"><span>'+a+'</span><b>'+b+'</b></div>'}
   if(!ops.length){setSum(kv("Opérations",0)+kv("Capital ajouté",fmt(capsTotal)+" "+CUR));return}
   var g=ops.map(function(e){return e.f-e.i}),bestG=Math.max.apply(null,g),worstG=Math.min.apply(null,g),maxX=Math.max.apply(null,ops.map(function(e){return e.x}));
-  setSum(kv("Opérations",ops.length)+kv("Capital ajouté",fmt(capsTotal)+" "+CUR)+kv("Meilleur résultat",sg(bestG)+" "+CUR)+kv("Pire résultat",sg(worstG)+" "+CUR)+kv("Plus grosse dépense",fmt(maxX)+" "+CUR));
+  setSum(kv("Opérations",ops.length)+kv("Capital ajouté",fmt(capsTotal)+" "+CUR)+kv("Meilleur résultat",'<span class="'+cls(bestG)+'">'+sg(bestG)+' '+CUR+'</span>')+kv("Pire résultat",'<span class="'+cls(worstG)+'">'+sg(worstG)+' '+CUR+'</span>')+kv("Plus grosse dépense",'<span class="neg">'+fmt(maxX)+' '+CUR+'</span>'));
 }
 function preview(){
   var i=+$("ini").value,f=+$("fin").value,d=+$("dp").value;
@@ -408,32 +407,96 @@ function csv(){
   E.forEach(function(e){s+=[e.d,e.type==="cap"?"ajout_capital":"operation",e.i,e.f,e.f-e.i,e.x,capAdded(e),'"'+e.n.replace(/"/g,'""')+'"'].join(";")+"\n"});
   return s;
 }
-function excelRows(){
-  var rows=[["Date","Type","Montant initial","Montant final","Bénéfice","Dépenses","Capital ajouté","Détail"]];
-  E.forEach(function(e){rows.push([e.d,e.type==="cap"?"Ajout de capital":"Opération",e.i,e.f,e.f-e.i,e.x,capAdded(e),e.n])});
-  return rows;
+function excelHtml(){
+  var GREEN="#15803d",RED="#b42318",YEL="#a16a00",HEAD="#0b6b5c";
+  function td(v,color,bold){
+    var style="padding:6px 10px;border:1px solid #ddd;"+(color?("color:"+color+";"):"")+(bold?"font-weight:bold;":"");
+    return '<td style="'+style+'">'+v+'</td>';
+  }
+  function th(v){return '<th style="padding:6px 10px;border:1px solid #ddd;background:'+HEAD+';color:#fff;text-align:left;">'+v+'</th>';}
+  var rows="<tr>"+["Date","Type","Montant initial","Montant final","Bénéfice","Bénéfice net","Dépenses","Capital ajouté","Détail"].map(th).join("")+"</tr>";
+  E.forEach(function(e){
+    var ben=e.f-e.i, benN=e.f-e.i-e.x, cap=capAdded(e), isCap=e.type==="cap";
+    rows+="<tr>"
+      +td(esc(e.d))
+      +td(isCap?"Ajout de capital":"Opération")
+      +td(fmt(e.i))
+      +td(fmt(e.f))
+      +td(sg(ben),isCap?null:(ben>=0?GREEN:RED),true)
+      +td(isCap?"—":sg(benN),isCap?null:(benN>=0?GREEN:RED),true)
+      +td(fmt(e.x),e.x?RED:null)
+      +td(cap?fmt(cap):"—",cap?YEL:null,!!cap)
+      +td(esc(e.n||""))
+      +"</tr>";
+  });
+  return '<html><head><meta charset="UTF-8"></head><body>'
+    +'<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:13px;">'+rows+'</table>'
+    +'</body></html>';
 }
+function hex2rgb(h){var n=parseInt(h.slice(1),16);return [(n>>16)&255,(n>>8)&255,n&255]}
 function pdfReport(){
   if(!window.jspdf){alert("La bibliothèque PDF n'a pas pu se charger. Vérifie ta connexion internet.");return}
-  var doc=new window.jspdf.jsPDF(), b=0,x=0;
+  var GREEN=hex2rgb("#15803d"),RED=hex2rgb("#b42318"),YEL=hex2rgb("#a16a00"),HEAD=hex2rgb("#0b6b5c"),DARK=[20,20,20],GREY=[120,120,120];
+  var doc=new window.jspdf.jsPDF({orientation:"l",unit:"mm",format:"a4"});
+  var pageW=297,marginX=14,b=0,x=0;
   E.forEach(function(e){if(e.type!=="cap")b+=e.f-e.i;x+=e.x});
-  doc.setFontSize(16);doc.text("Rapport P2P Money",14,18);
-  doc.setFontSize(10);doc.setTextColor(120);doc.text("Genere le "+new Date().toLocaleDateString("fr-FR"),14,25);
-  doc.setTextColor(20);doc.setFontSize(12);
-  doc.text("Capital actuel : "+fmt(currentCapital())+" "+CUR,14,36);
-  doc.text("Benefices : "+fmt(b)+" "+CUR,14,44);
-  doc.text("Depenses : "+fmt(x)+" "+CUR,14,52);
-  doc.text("Resultat net : "+sg(b-x)+" "+CUR,14,60);
-  var y=74;
-  doc.setFontSize(12);doc.text("Historique des operations",14,y);y+=8;
-  doc.setFontSize(9);
-  if(!E.length){doc.text("Aucune operation enregistree.",14,y)}
-  E.forEach(function(e){
-    if(y>285){doc.addPage();y=20}
-    var line=e.type==="cap"
-      ?(e.d+" - Ajout de capital : +"+fmt(e.f-e.i)+" "+CUR+(e.n?" ("+e.n+")":""))
-      :(e.d+" - "+fmt(e.i)+" vers "+fmt(e.f)+" ("+sg(e.f-e.i)+" "+CUR+")"+(e.x?" - depenses "+fmt(e.x)+" "+CUR:"")+(e.c?" - capital ajoute +"+fmt(e.c)+" "+CUR:"")+(e.n?" - "+e.n:""));
-    doc.text(line,14,y);y+=6.5;
+
+  doc.setFontSize(16);doc.setTextColor.apply(doc,DARK);doc.text("Rapport P2P Money",marginX,16);
+  doc.setFontSize(10);doc.setTextColor.apply(doc,GREY);doc.text("Genere le "+new Date().toLocaleDateString("fr-FR"),marginX,22);
+
+  doc.setFontSize(11);
+  var sy=31,sx=marginX,gap=62;
+  function stat(label,val,color){
+    doc.setTextColor.apply(doc,GREY);doc.text(label,sx,sy);
+    doc.setTextColor.apply(doc,color);doc.setFont(undefined,"bold");doc.text(val,sx,sy+6);doc.setFont(undefined,"normal");
+    sx+=gap;
+  }
+  stat("Capital actuel",fmt(currentCapital())+" "+CUR,YEL);
+  stat("Benefices",fmt(b)+" "+CUR,GREEN);
+  stat("Depenses",fmt(x)+" "+CUR,RED);
+  stat("Resultat net",sg(b-x)+" "+CUR,b-x>=0?GREEN:RED);
+
+  var cols=[
+    {h:"Date",w:22},{h:"Type",w:24},{h:"M. initial",w:24},{h:"M. final",w:24},
+    {h:"Benefice",w:24},{h:"Benefice net",w:26},{h:"Depenses",w:22},
+    {h:"Capital ajoute",w:26},{h:"Detail",w:0}
+  ];
+  var fixedW=cols.reduce(function(a,c){return a+c.w},0);
+  cols[cols.length-1].w=pageW-2*marginX-fixedW;
+
+  var y=48;
+  function drawHeader(){
+    var cx=marginX;
+    doc.setFillColor.apply(doc,HEAD);doc.rect(marginX,y,pageW-2*marginX,7,"F");
+    doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont(undefined,"bold");
+    cols.forEach(function(c){doc.text(c.h,cx+2,y+5);cx+=c.w});
+    doc.setFont(undefined,"normal");
+    y+=7;
+  }
+  drawHeader();
+  doc.setFontSize(8.5);
+  if(!E.length){doc.setTextColor.apply(doc,GREY);doc.text("Aucune operation enregistree.",marginX+2,y+5);}
+  E.forEach(function(e,idx){
+    if(y>190){doc.addPage("a4","l");y=20;drawHeader();doc.setFontSize(8.5);}
+    var isCap=e.type==="cap", ben=e.f-e.i, benN=e.f-e.i-e.x, cap=capAdded(e);
+    if(idx%2===1){doc.setFillColor(245,247,246);doc.rect(marginX,y,pageW-2*marginX,6.5,"F");}
+    var cx=marginX,vals=[
+      {t:e.d,c:DARK},
+      {t:isCap?"Ajout de capital":"Operation",c:DARK},
+      {t:fmt(e.i),c:DARK},
+      {t:fmt(e.f),c:DARK},
+      {t:sg(ben),c:isCap?DARK:(ben>=0?GREEN:RED)},
+      {t:isCap?"-":sg(benN),c:isCap?DARK:(benN>=0?GREEN:RED)},
+      {t:fmt(e.x),c:e.x?RED:DARK},
+      {t:cap?("+"+fmt(cap)):"-",c:cap?YEL:DARK},
+      {t:(e.n||"").length>55?(e.n.slice(0,55)+"…"):(e.n||""),c:GREY}
+    ];
+    vals.forEach(function(v,i){
+      doc.setTextColor.apply(doc,v.c);
+      doc.text(String(v.t),cx+2,y+4.5);
+      cx+=cols[i].w;
+    });
+    y+=6.5;
   });
   doc.save("rapport-p2pmoney-"+new Date().toISOString().slice(0,10)+".pdf");
 }
@@ -491,10 +554,11 @@ $("ex").addEventListener("click",function(){
   catch(e){b.textContent="Copie impossible sur ce navigateur"}
 });
 $("exxl").addEventListener("click",function(){
-  if(!window.XLSX){alert("La bibliothèque Excel n'a pas pu se charger. Vérifie ta connexion internet.");return}
-  var ws=XLSX.utils.aoa_to_sheet(excelRows()),wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"Historique");
-  XLSX.writeFile(wb,"p2pmoney-"+new Date().toISOString().slice(0,10)+".xlsx");
+  var blob=new Blob([excelHtml()],{type:"application/vnd.ms-excel"});
+  var url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="p2pmoney-"+new Date().toISOString().slice(0,10)+".xls";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url)},1000);
 });
 $("expdf").addEventListener("click",pdfReport);
 $("expJson").addEventListener("click",function(){
