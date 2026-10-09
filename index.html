@@ -144,7 +144,12 @@ nav button.on{color:var(--acc);font-weight:700}
 </section>
 
 <section class="pg" id="p-set">
-  <h2>Paramètres</h2>
+  <h2>Installer l'application</h2>
+  <div class="box" id="installBox">
+    <p class="prev" style="margin-top:0">Vérification de la disponibilité…</p>
+  </div>
+
+  <h2 style="margin-top:24px">Paramètres</h2>
   <div class="box">
     <label>Devise affichée<input type="text" id="cur" maxlength="6"></label>
     <p class="prev">Apparence</p>
@@ -434,6 +439,13 @@ function excelHtml(){
     +'</body></html>';
 }
 function hex2rgb(h){var n=parseInt(h.slice(1),16);return [(n>>16)&255,(n>>8)&255,n&255]}
+function fmtPdf(n){
+  n=Math.round(n);var neg=n<0;n=Math.abs(n);
+  var s=String(n),out="",c=0;
+  for(var i=s.length-1;i>=0;i--){out=s[i]+out;c++;if(c%3===0&&i!==0)out="."+out}
+  return (neg?"-":"")+out;
+}
+function sgPdf(n){return (n>0?"+":"")+fmtPdf(n)}
 function pdfReport(){
   if(!window.jspdf){alert("La bibliothèque PDF n'a pas pu se charger. Vérifie ta connexion internet.");return}
   var GREEN=hex2rgb("#15803d"),RED=hex2rgb("#b42318"),YEL=hex2rgb("#a16a00"),HEAD=hex2rgb("#0b6b5c"),DARK=[20,20,20],GREY=[120,120,120];
@@ -451,10 +463,10 @@ function pdfReport(){
     doc.setTextColor.apply(doc,color);doc.setFont(undefined,"bold");doc.text(val,sx,sy+6);doc.setFont(undefined,"normal");
     sx+=gap;
   }
-  stat("Capital actuel",fmt(currentCapital())+" "+CUR,YEL);
-  stat("Benefices",fmt(b)+" "+CUR,GREEN);
-  stat("Depenses",fmt(x)+" "+CUR,RED);
-  stat("Resultat net",sg(b-x)+" "+CUR,b-x>=0?GREEN:RED);
+  stat("Capital actuel",fmtPdf(currentCapital())+" "+CUR,YEL);
+  stat("Benefices",fmtPdf(b)+" "+CUR,GREEN);
+  stat("Depenses",fmtPdf(x)+" "+CUR,RED);
+  stat("Resultat net",sgPdf(b-x)+" "+CUR,b-x>=0?GREEN:RED);
 
   var cols=[
     {h:"Date",w:22},{h:"Type",w:24},{h:"M. initial",w:24},{h:"M. final",w:24},
@@ -483,12 +495,12 @@ function pdfReport(){
     var cx=marginX,vals=[
       {t:e.d,c:DARK},
       {t:isCap?"Ajout de capital":"Operation",c:DARK},
-      {t:fmt(e.i),c:DARK},
-      {t:fmt(e.f),c:DARK},
-      {t:sg(ben),c:isCap?DARK:(ben>=0?GREEN:RED)},
-      {t:isCap?"-":sg(benN),c:isCap?DARK:(benN>=0?GREEN:RED)},
-      {t:fmt(e.x),c:e.x?RED:DARK},
-      {t:cap?("+"+fmt(cap)):"-",c:cap?YEL:DARK},
+      {t:fmtPdf(e.i),c:DARK},
+      {t:fmtPdf(e.f),c:DARK},
+      {t:sgPdf(ben),c:isCap?DARK:(ben>=0?GREEN:RED)},
+      {t:isCap?"-":sgPdf(benN),c:isCap?DARK:(benN>=0?GREEN:RED)},
+      {t:fmtPdf(e.x),c:e.x?RED:DARK},
+      {t:cap?("+"+fmtPdf(cap)):"-",c:cap?YEL:DARK},
       {t:(e.n||"").length>55?(e.n.slice(0,55)+"…"):(e.n||""),c:GREY}
     ];
     vals.forEach(function(v,i){
@@ -637,6 +649,40 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").catch(function(){});
   });
 }
+
+var deferredInstall=null;
+function renderInstallBox(){
+  var b=$("installBox");if(!b)return;
+  var standalone=window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
+  if(standalone){
+    b.innerHTML='<p class="prev" style="margin-top:0">L\'application est déjà installée sur cet appareil.</p>';
+    return;
+  }
+  if(deferredInstall){
+    b.innerHTML='<p class="prev" style="margin-top:0">Installe l\'app sur ton téléphone pour l\'ouvrir comme une application, même hors ligne.</p><button class="btn" id="installBtn" type="button">Installer l\'application</button>';
+    $("installBtn").addEventListener("click",function(){
+      deferredInstall.prompt();
+      deferredInstall.userChoice.then(function(){deferredInstall=null;renderInstallBox()});
+    });
+    return;
+  }
+  var ua=navigator.userAgent||"";
+  var isIOS=/iPhone|iPad|iPod/.test(ua);
+  if(isIOS){
+    b.innerHTML='<p class="prev" style="margin-top:0">Sur iPhone/iPad : appuie sur le bouton <b>Partager</b> de Safari, puis <b>Sur l\'écran d\'accueil</b>.</p>';
+  }else{
+    b.innerHTML='<p class="prev" style="margin-top:0">Ouvre le menu de ton navigateur (⋮) puis choisis <b>Installer l\'application</b> ou <b>Ajouter à l\'écran d\'accueil</b>.</p>';
+  }
+}
+window.addEventListener("beforeinstallprompt",function(ev){
+  ev.preventDefault();
+  deferredInstall=ev;
+  renderInstallBox();
+});
+window.addEventListener("appinstalled",function(){
+  deferredInstall=null;renderInstallBox();
+});
+renderInstallBox();
 </script>
 </body>
 </html>
